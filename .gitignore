@@ -1,1 +1,3 @@
 *.swp
+doxy/html
+doxy/latex
