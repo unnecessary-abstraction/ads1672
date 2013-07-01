@@ -1,22 +1,25 @@
-/*******************************************************************************
-	mcbsp.c: McBSP interface for ads1672 driver.
+/*
+ * Copyright (C) 2011-2013 Paul Barker, Loughborough University
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
 
-	Copyright (C) 2011-2013 Paul Barker, Loughborough University
-
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-*******************************************************************************/
+/*
+ * mcbsp.c
+ * McBSP interface for ads1672 driver.
+ */
 
 #include <linux/string.h>
 #include <plat/mcbsp.h>
@@ -28,32 +31,22 @@
 	Private declarations and functions
 *******************************************************************************/
 
-/*
- * OMAP35XX_MCBSP1_DRR_REG: McBSP1 data receive register.
- */
+/* McBSP1 data receive register. */
 #define OMAP35XX_MCBSP1_DRR 0x48074000
 
-/**
- * ADS1672_DATA_DELAY: Delay in McBSP clock cycles between frame sync pulse and
- * first data bit.
+/* Delay in McBSP clock cycles between frame sync pulse and first data bit.
  *
  * TODO: Set to correct value.
  */
 #define ADS1672_DATA_DELAY	0
 
-/**
- * ADS1672_MCBSP_ID: McBSP to which the ADS1672 is attached.
- */
+/* McBSP to which the ADS1672 is attached. */
 #define ADS1672_MCBSP_ID	0
 
-/**
- * dma_lch: Allocated DMA channel
- */
+/* Allocated DMA channel */
 static int dma_lch;
 
-/**
- * ads1672_mcbsp_callback: DMA callback function
- */
+/* DMA callback function */
 static void ads1672_mcbsp_callback(int lch, u16 ch_status, void *data)
 {
 	printk(KERN_ALERT "ads1672: Callback: %x\n", ch_status);
