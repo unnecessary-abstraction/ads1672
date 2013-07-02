@@ -26,12 +26,16 @@
 #include <linux/moduleparam.h>
 
 #include "buffer.h"
+#include "device.h"
 #include "gpio.h"
 #include "mcbsp.h"
 #include "module.h"
 
 void ads1672_cleanup(void)
 {
+	/* Delete device objects. */
+	ads1672_device_exit();
+
 	/* Delete hardware interface.*/
 	ads1672_mcbsp_exit();
 	ads1672_gpio_exit();
@@ -78,7 +82,16 @@ int __init ads1672_init(void)
 		ads1672_cleanup();
 		return r;
 	}
-	
+
+	/* Initialize character and platform device objects. */
+	r = ads1672_device_init();
+	if (r < 0) {
+		printk(KERN_ERR "ads1672: Failed to initialize device objects. "
+				"Aborting module init...\n");
+		ads1672_cleanup();
+		return r;
+	}
+
 	printk(KERN_ALERT "ads1672: Loaded\n");
 	return 0;
 }
