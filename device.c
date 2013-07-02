@@ -28,6 +28,7 @@
 
 #include "buffer.h"
 #include "device.h"
+#include "mcbsp.h"
 
 /*******************************************************************************
 	Private declarations and data.
@@ -102,6 +103,31 @@ static int ads1672_release(struct inode *inode, struct file *f)
 	return 0;
 }
 
+static ssize_t ads1672_status_show(struct device *dev, struct device_attribute *unused, char *buf)
+{
+	int status = ads1672_mcbsp_status();
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", status);
+}
+
+static ssize_t ads1672_status_store(struct device *dev, struct device_attribute *unused, const char *buf, size_t count)
+{
+	int status;
+	int r = kstrtoint(buf, 0, &status);
+	if (r < 0)
+		return r;
+
+	if (status & ADS1672_STATUS_RUNNING)
+		ads1672_mcbsp_start();
+	else
+		ads1672_mcbsp_stop();
+
+	return count;
+}
+
+/* Declare sysfs attributes for ADS1672 device. */
+static DEVICE_ATTR(status, 0660, ads1672_status_show, ads1672_status_store);
+
 /*******************************************************************************
 	Public functions.
 *******************************************************************************/
@@ -163,6 +189,16 @@ int ads1672_device_init(void)
 	if (r < 0) {
 		printk(KERN_WARNING "ads1672: "
 				"Error %d initializing platform device\n", r);
+		cdev_del(&cdev);
+		return r;
+	}
+
+	r = device_create_file(&plat.dev, &dev_attr_status);
+	if (r < 0) {
+		printk(KERN_WARNING "ads1672: "
+				"Error %d creating 'status' device attribute\n",
+				r);
+		platform_device_unregister(&plat);
 		cdev_del(&cdev);
 		return r;
 	}
