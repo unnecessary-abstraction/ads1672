@@ -19,4 +19,4 @@
 ################################################################################
 
 obj-m += ads1672.o
-ads1672-objs := buffer.o gpio.o mcbsp.o module.o 
+ads1672-objs := buffer.o device.o gpio.o mcbsp.o module.o
