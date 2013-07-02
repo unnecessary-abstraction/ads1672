@@ -1,8 +1,10 @@
+#! /bin/sh
 ################################################################################
-#	Makefile for ADS1672 driver.
+#
+#	Load driver for Texas Instruments ADS1672 Analog to Digital Converter.
 #
 #	Copyright (C) 2011-2013 Paul Barker, Loughborough University
-#	
+#
 #	This program is free software; you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
 #	the Free Software Foundation; either version 2 of the License, or
@@ -18,18 +20,28 @@
 #	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ################################################################################
 
-SRC := $(shell pwd)
-KERNEL_SRC := kernel
+set -e
 
-all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules
+# Variables
+MODULE_NAME="ads1672"
+DEVICE_NAME=$MODULE_NAME
+DEVICE_OWNER="root"
+DEVICE_GROUP="root"
+DEVICE_MODE="0660"
 
-modules_install:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules_install
+# Invoke modprobe with the arguments we got on the command line
+modprobe $MODULE_NAME $@
 
-install: modules_install
-	install -m 0755 -d $(INSTALL_MOD_PATH)/bin
-	install -m 0755 bin/ads1672_load bin/ads1672_unload $(INSTALL_MOD_PATH)/bin
+# Remove stale device node (if present) and create a fresh node with the correct
+# major and minor numbers
+rm -f /dev/$DEVICE_NAME
 
-clean:
-	rm -rf *.o *.ko *.mod.c .*.cmd .tmp_versions *.order *.symvers *.o.d *~
+DEVICE_MAJOR=$(cat /sys/module/$MODULE_NAME/parameters/major)
+DEVICE_MINOR=$(cat /sys/module/$MODULE_NAME/parameters/minor)
+
+mknod /dev/$DEVICE_NAME c $DEVICE_MAJOR $DEVICE_MINOR
+
+# Set user, group and mode
+chown $DEVICE_OWNER /dev/$DEVICE_NAME
+chgrp $DEVICE_GROUP /dev/$DEVICE_NAME
+chmod $DEVICE_MODE /dev/$DEVICE_NAME

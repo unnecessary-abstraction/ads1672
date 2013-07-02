@@ -1,8 +1,10 @@
+#! /bin/sh
 ################################################################################
-#	Makefile for ADS1672 driver.
+#
+#	Unload driver for Texas Instruments ADS1672 Analog to Digital Converter.
 #
 #	Copyright (C) 2011-2013 Paul Barker, Loughborough University
-#	
+#
 #	This program is free software; you can redistribute it and/or modify
 #	it under the terms of the GNU General Public License as published by
 #	the Free Software Foundation; either version 2 of the License, or
@@ -18,18 +20,14 @@
 #	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 ################################################################################
 
-SRC := $(shell pwd)
-KERNEL_SRC := kernel
+set -e
 
-all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules
+# Variables
+MODULE_NAME="ads1672"
+DEVICE_NAME=$MODULE_NAME
 
-modules_install:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules_install
+# Invoke modprobe to remove module
+modprobe -r $MODULE_NAME
 
-install: modules_install
-	install -m 0755 -d $(INSTALL_MOD_PATH)/bin
-	install -m 0755 bin/ads1672_load bin/ads1672_unload $(INSTALL_MOD_PATH)/bin
-
-clean:
-	rm -rf *.o *.ko *.mod.c .*.cmd .tmp_versions *.order *.symvers *.o.d *~
+# Remove stale device node
+rm -f /dev/$DEVICE_NAME
