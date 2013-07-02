@@ -46,6 +46,9 @@
 /* Allocated DMA channel */
 static int dma_lch;
 
+/* It's useful to keep track of the current status. */
+static int mcbsp_status = 0;
+
 /* DMA callback function */
 static void ads1672_mcbsp_callback(int lch, u16 ch_status, void *data)
 {
@@ -63,6 +66,8 @@ void ads1672_mcbsp_start(void)
 	/* Start transfer. */
 	omap_mcbsp_start(ADS1672_MCBSP_ID, 0, 1);
 
+	mcbsp_status |= ADS1672_STATUS_RUNNING;
+
 	printk(KERN_ALERT "ads1672: Started\n");
 }
 
@@ -74,7 +79,14 @@ void ads1672_mcbsp_stop(void)
 	/* Stop dma transfer. */
 	omap_stop_dma(dma_lch);
 
+	mcbsp_status &= ~ADS1672_STATUS_RUNNING;
+
 	printk(KERN_ALERT "ads1672: Stopped\n");
+}
+
+int ads1672_mcbsp_status(void)
+{
+	return mcbsp_status;
 }
 
 int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
@@ -132,6 +144,8 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
 
 	/* Link the DMA channel to itself. */
 	omap_dma_link_lch(dma_lch, dma_lch);
+
+	mcbsp_status |= ADS1672_STATUS_READY;
 	
 	return 0;
 }
@@ -145,4 +159,6 @@ void ads1672_mcbsp_exit(void)
 
 	/* Close mcbsp. */
 	omap_mcbsp_free(ADS1672_MCBSP_ID);
+
+	mcbsp_status &= ~ADS1672_STATUS_READY;
 }
