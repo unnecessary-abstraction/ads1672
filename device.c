@@ -28,6 +28,7 @@
 
 #include "buffer.h"
 #include "device.h"
+#include "gpio.h"
 #include "mcbsp.h"
 
 /*******************************************************************************
@@ -125,8 +126,48 @@ static ssize_t ads1672_status_store(struct device *dev, struct device_attribute 
 	return count;
 }
 
+static ssize_t ads1672_gpio_start_show(struct device *dev, struct device_attribute *unused, char *buf)
+{
+	int status = ads1672_gpio_start_get();
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", status);
+}
+
+static ssize_t ads1672_gpio_start_store(struct device *dev, struct device_attribute *unused, const char *buf, size_t count)
+{
+	int status;
+	int r = kstrtoint(buf, 0, &status);
+	if (r < 0)
+		return r;
+
+	ads1672_gpio_start_set(status);
+
+	return count;
+}
+
+static ssize_t ads1672_gpio_select_show(struct device *dev, struct device_attribute *unused, char *buf)
+{
+	int status = ads1672_gpio_select_get();
+
+	return scnprintf(buf, PAGE_SIZE, "%d\n", status);
+}
+
+static ssize_t ads1672_gpio_select_store(struct device *dev, struct device_attribute *unused, const char *buf, size_t count)
+{
+	int status;
+	int r = kstrtoint(buf, 0, &status);
+	if (r < 0)
+		return r;
+
+	ads1672_gpio_select_set(status);
+
+	return count;
+}
+
 /* Declare sysfs attributes for ADS1672 device. */
 static DEVICE_ATTR(status, 0660, ads1672_status_show, ads1672_status_store);
+static DEVICE_ATTR(gpio_start, 0660, ads1672_gpio_start_show, ads1672_gpio_start_store);
+static DEVICE_ATTR(gpio_select, 0660, ads1672_gpio_select_show, ads1672_gpio_select_store);
 
 /*******************************************************************************
 	Public functions.
@@ -197,6 +238,26 @@ int ads1672_device_init(void)
 	if (r < 0) {
 		printk(KERN_WARNING "ads1672: "
 				"Error %d creating 'status' device attribute\n",
+				r);
+		platform_device_unregister(&plat);
+		cdev_del(&cdev);
+		return r;
+	}
+
+	r = device_create_file(&plat.dev, &dev_attr_gpio_start);
+	if (r < 0) {
+		printk(KERN_WARNING "ads1672: "
+				"Error %d creating 'gpio_start' device attribute\n",
+				r);
+		platform_device_unregister(&plat);
+		cdev_del(&cdev);
+		return r;
+	}
+
+	r = device_create_file(&plat.dev, &dev_attr_gpio_select);
+	if (r < 0) {
+		printk(KERN_WARNING "ads1672: "
+				"Error %d creating 'gpio_select' device attribute\n",
 				r);
 		platform_device_unregister(&plat);
 		cdev_del(&cdev);
