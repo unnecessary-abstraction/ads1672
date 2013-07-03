@@ -52,7 +52,6 @@ static int mcbsp_status = 0;
 /* DMA callback function */
 static void ads1672_mcbsp_callback(int lch, u16 ch_status, void *data)
 {
-	printk(KERN_ALERT "ads1672: Callback: %x\n", ch_status);
 }
 
 /*******************************************************************************
