@@ -169,6 +169,14 @@ static DEVICE_ATTR(status, 0660, ads1672_status_show, ads1672_status_store);
 static DEVICE_ATTR(gpio_start, 0660, ads1672_gpio_start_show, ads1672_gpio_start_store);
 static DEVICE_ATTR(gpio_select, 0660, ads1672_gpio_select_show, ads1672_gpio_select_store);
 
+/* Called on release of ADS1672 device - necessary to unload the module without
+ * error
+ */
+static void ads1672_device_release(struct device *dev)
+{
+	/* Curently ignored */
+}
+
 /*******************************************************************************
 	Public functions.
 *******************************************************************************/
@@ -225,6 +233,7 @@ int ads1672_device_init(void)
 	plat.name = "ads1672";
 	plat.id = -1;
 	plat.num_resources = 0;
+	plat.dev.release = ads1672_device_release;
 
 	r = platform_device_register(&plat);
 	if (r < 0) {
