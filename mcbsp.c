@@ -132,7 +132,7 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
 		return r;
 
 	omap_set_dma_transfer_params(dma_lch, OMAP_DMA_DATA_TYPE_S32,
-			frame_len, frames, OMAP_DMA_SYNC_FRAME,
+			frame_len, frames, OMAP_DMA_SYNC_ELEMENT,
 			OMAP24XX_DMA_MCBSP1_RX, OMAP_DMA_SRC_SYNC);
 	
 	omap_set_dma_src_params(dma_lch, 0, OMAP_DMA_AMODE_CONSTANT,
