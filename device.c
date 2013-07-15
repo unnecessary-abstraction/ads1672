@@ -23,9 +23,11 @@
 
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/ioctl.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
+#include "ads1672_ioctl.h"
 #include "buffer.h"
 #include "device.h"
 #include "gpio.h"
@@ -41,6 +43,11 @@ static ssize_t ads1672_read(struct file *f,
 			    size_t count,
 			    loff_t *offp);
 
+/* Handle ioctl operation on an ADS1672 device. */
+static long ads1672_ioctl(struct file *f,
+			  unsigned int cmd,
+			  unsigned long arg);
+
 /* Handle open operation on an ADS1672 device. */
 static int ads1672_open(struct inode *inode, struct file *f);
 
@@ -55,6 +62,7 @@ static struct file_operations fops = {
 	.owner		= THIS_MODULE,
 	.llseek		= no_llseek,
 	.read		= ads1672_read,
+	.unlocked_ioctl	= ads1672_ioctl,
 	.open		= ads1672_open,
 	.release	= ads1672_release,
 };
@@ -88,6 +96,77 @@ static ssize_t ads1672_read(struct file *f,
 		return r;
 	else
 		return r * sizeof(int);
+}
+
+static long ads1672_ioctl(struct file *f,
+			  unsigned int cmd,
+			  unsigned long arg)
+{
+	switch (cmd) {
+		case ADS1672_IOCTL_START:
+			ads1672_mcbsp_start();
+			return 0;
+
+		case ADS1672_IOCTL_STOP:
+			ads1672_mcbsp_stop();
+			return 0;
+
+		case ADS1672_IOCTL_GPIO_START_SET:
+		{
+			int * status = (int *)arg;
+			if (!access_ok(VERIFY_READ, status, sizeof(*status)))
+				return -EINVAL;
+			ads1672_gpio_start_set(*status);
+			return 0;
+		}
+		case ADS1672_IOCTL_GPIO_START_GET:
+		{
+			int * status = (int *)arg;
+			if (!access_ok(VERIFY_WRITE, status, sizeof(*status)))
+				return -EINVAL;
+			*status = ads1672_gpio_start_get();
+			return 0;
+		}
+		case ADS1672_IOCTL_GPIO_SELECT_SET:
+		{
+			int * status = (int *)arg;
+			if (!access_ok(VERIFY_READ, status, sizeof(*status)))
+				return -EINVAL;
+			ads1672_gpio_select_set(*status);
+			return 0;
+		}
+		case ADS1672_IOCTL_GPIO_SELECT_GET:
+		{
+			int * status = (int *)arg;
+			if (!access_ok(VERIFY_WRITE, status, sizeof(*status)))
+				return -EINVAL;
+			*status = ads1672_gpio_select_get();
+			return 0;
+		}
+		case ADS1672_IOCTL_CLEAR_CONDITION:
+			ads1672_buf_clear_cond();
+			return 0;
+
+		case ADS1672_IOCTL_GET_TIMESPEC:
+		{
+			struct timespec * ts = (struct timespec *)arg;
+			if (!access_ok(VERIFY_WRITE, ts, sizeof(*ts)))
+				return -EINVAL;
+			ads1672_buf_get_timespec(ts);
+			return 0;
+		}
+		case ADS1672_IOCTL_GET_CONDITION:
+		{
+			int * cond = (int *)arg;
+			if (!access_ok(VERIFY_WRITE, cond, sizeof(*cond)))
+				return -EINVAL;
+			*cond = ads1672_buf_get_cond();
+			return 0;
+		}
+
+		default:
+			return -ENOTTY;
+	}
 }
 
 static int ads1672_open(struct inode *inode, struct file *f)
