@@ -175,6 +175,16 @@ dma_addr_t ads1672_buf_get_dma_addr(void)
 	return buffer_base_dma;
 }
 
+int ads1672_buf_get_cond(void)
+{
+	return read_buf->cond;
+}
+
+void ads1672_buf_get_timespec(struct timespec * ts)
+{
+	*ts = read_buf->ts;
+}
+
 int ads1672_buf_init(void)
 {	
 	buffer_base = dma_alloc_coherent(NULL, 2 * ADS1672_BUFFER_SIZE, &buffer_base_dma, GFP_KERNEL);

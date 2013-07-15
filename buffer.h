@@ -153,6 +153,16 @@ void ads1672_buf_clear_cond(void);
 dma_addr_t ads1672_buf_get_dma_addr(void);
 
 /**
+ * Get the current condition value of the buffer.
+ */
+int ads1672_buf_get_cond(void);
+
+/**
+ * Get the current timespec of the buffer.
+ */
+void ads1672_buf_get_timespec(struct timespec * ts);
+
+/**
  * Initialize buffering for an ADS1672 device.
  */
 int ads1672_buf_init(void);
