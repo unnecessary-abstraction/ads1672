@@ -25,6 +25,7 @@
 #include <plat/mcbsp.h>
 #include <plat/dma.h>
 
+#include "buffer.h"
 #include "mcbsp.h"
 
 /*******************************************************************************
@@ -52,6 +53,17 @@ static int mcbsp_status = 0;
 /* DMA callback function */
 static void ads1672_mcbsp_callback(int lch, u16 ch_status, void *data)
 {
+	int valid_samples;
+	struct timespec ts;
+
+	getnstimeofday(&ts);
+
+	if (ch_status == OMAP_DMA_BLOCK_IRQ) {
+		ads1672_buf_flip(ts);
+	} else {
+		valid_samples = 0; /* TODO: Can we work out how many valid samples we have? */
+		ads1672_buf_err_and_flip(ADS1672_COND_DMA_ERROR, valid_samples, ts);
+	}
 }
 
 /*******************************************************************************
