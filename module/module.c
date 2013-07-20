@@ -21,6 +21,7 @@
  * Module init and exit for ads1672 driver.
  */
 
+#include <ads1672.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>

@@ -21,6 +21,7 @@
  * Input buffering for ads1672 driver.
  */
 
+#include <ads1672.h>
 #include <linux/dma-mapping.h>
 #include <linux/completion.h>
 #include <asm/uaccess.h>

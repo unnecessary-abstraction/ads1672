@@ -27,21 +27,6 @@
 #include <plat/dma.h>
 
 /**
- * ads1672 status codes, currently only used by McBSP interface.
- */
-enum ADS1672_STATUS {
-	/**
-	 * McBSP interface running.
-	 */
-	ADS1672_STATUS_RUNNING = 0x0001,
-
-	/**
-	 * McBSP interface ready.
-	 */
-	ADS1672_STATUS_READY = 0x0002
-};
-
-/**
  * Start McBSP streaming.
  */
 void ads1672_mcbsp_start(void);

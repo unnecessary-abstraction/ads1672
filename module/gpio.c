@@ -21,6 +21,7 @@
  * GPIO interface for ads1672 driver.
  */
 
+#include <ads1672.h>
 #include <linux/gpio.h>
 #include <plat/mux.h>
 

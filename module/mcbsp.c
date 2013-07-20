@@ -21,6 +21,7 @@
  * McBSP interface for ads1672 driver.
  */
 
+#include <ads1672.h>
 #include <linux/string.h>
 #include <plat/mcbsp.h>
 #include <plat/dma.h>
