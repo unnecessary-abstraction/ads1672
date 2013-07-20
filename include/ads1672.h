@@ -41,6 +41,55 @@ enum ADS1672_IOCTL {
 	ADS1672_IOCTL_GET_CONDITION = _IOR(ADS1672_IOCTL_MAGIC, 9, int),
 };
 
+#ifndef __KERNEL__
+#include <stropts.h>
+
+static inline int ads1672_ioctl_start(int fh)
+{
+	return ioctl(fh, ADS1672_IOCTL_START);
+}
+
+static inline int ads1672_ioctl_stop(int fh)
+{
+	return ioctl(fh, ADS1672_IOCTL_STOP);
+}
+
+static inline int ads1672_ioctl_gpio_start_get(int fh, int * status)
+{
+	return ioctl(fh, ADS1672_IOCTL_GPIO_START_GET, status);
+}
+
+static inline int ads1672_ioctl_gpio_start_set(int fh, int status)
+{
+	return ioctl(fh, ADS1672_IOCTL_GPIO_START_SET, &status);
+}
+
+static inline int ads1672_ioctl_gpio_select_get(int fh, int * status)
+{
+	return ioctl(fh, ADS1672_IOCTL_GPIO_SELECT_GET, status);
+}
+
+static inline int ads1672_ioctl_gpio_select_set(int fh, int status)
+{
+	return ioctl(fh, ADS1672_IOCTL_GPIO_SELECT_SET, &status);
+}
+
+static inline int ads1672_ioctl_clear_condition(int fh)
+{
+	return ioctl(fh, ADS1672_IOCTL_CLEAR_CONDITION);
+}
+
+static inline int ads1672_ioctl_get_condition(int fh, int * condition)
+{
+	return ioctl(fh, ADS1672_IOCTL_GET_CONDITION, condition);
+}
+
+static inline int ads1672_ioctl_get_timespec(int fh, struct timespec * ts)
+{
+	return ioctl(fh, ADS1672_IOCTL_GET_TIMESPEC, ts);
+}
+#endif
+
 enum {
 	/**
 	* Size of each buffer in bytes.
