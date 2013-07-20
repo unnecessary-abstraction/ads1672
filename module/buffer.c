@@ -35,7 +35,7 @@
 /* A buffer used by the ADS1672 device. */
 struct ads1672_buffer {
 	/* Buffer start location. */
-	int *			start;
+	ads1672_sample_t *	start;
 	
 	/* Number of valid samples. */
 	int			nsamples;
@@ -47,10 +47,10 @@ struct ads1672_buffer {
 	struct timespec		ts;
 };
 
-static int *			buffer_base = NULL;
+static ads1672_sample_t *	buffer_base = NULL;
 static dma_addr_t		buffer_base_dma = 0;
 
-static int *			read_ptr = NULL;
+static ads1672_sample_t *	read_ptr = NULL;
 static struct completion	on_flip;
 
 static struct ads1672_buffer	buffers[2];
@@ -85,7 +85,7 @@ static int prep_read(size_t count)
 	Public functions
 *******************************************************************************/
 
-int ads1672_buf_readk(int * out, size_t count)
+int ads1672_buf_readk(ads1672_sample_t * out, size_t count)
 {
 	int len = prep_read(count);
 	if (len < 0)
@@ -96,7 +96,7 @@ int ads1672_buf_readk(int * out, size_t count)
 	return len;
 }
 
-int ads1672_buf_readu(int __user * out, size_t count)
+int ads1672_buf_readu(ads1672_sample_t __user * out, size_t count)
 {
 	unsigned long r;
 	int len = prep_read(count);
@@ -188,7 +188,8 @@ void ads1672_buf_get_timespec(struct timespec * ts)
 
 int ads1672_buf_init(void)
 {	
-	buffer_base = dma_alloc_coherent(NULL, 2 * ADS1672_BUFFER_SIZE, &buffer_base_dma, GFP_KERNEL);
+	buffer_base = (ads1672_sample_t *)dma_alloc_coherent(NULL,
+			2 * ADS1672_BUFFER_SIZE, &buffer_base_dma, GFP_KERNEL);
 	if (!buffer_base)
 		return -ENOMEM;
 	

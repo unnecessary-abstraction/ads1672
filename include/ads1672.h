@@ -90,6 +90,11 @@ static inline int ads1672_ioctl_get_timespec(int fh, struct timespec * ts)
 }
 #endif
 
+/**
+ * Sample format used by ads1672 driver.
+ */
+typedef int ads1672_sample_t;
+
 enum {
 	/**
 	* Size of each buffer in bytes.
@@ -102,7 +107,7 @@ enum {
 	/**
 	* Number of samples in each buffer, calculated from ADS1672_BUFFER_SIZE.
 	*/
-	ADS1672_BUFFER_COUNT = ADS1672_BUFFER_SIZE / sizeof(int)
+	ADS1672_BUFFER_COUNT = ADS1672_BUFFER_SIZE / sizeof(ads1672_sample_t)
 };
 
 /**

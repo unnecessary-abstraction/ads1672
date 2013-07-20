@@ -24,6 +24,7 @@
 #ifndef __ADS1672_BUFFER_H_INCLUDED__
 #define __ADS1672_BUFFER_H_INCLUDED__
 
+#include <ads1672.h>
 #include <asm/uaccess.h>
 #include <plat/dma.h>
 
@@ -34,7 +35,7 @@
  *
  * \returns number of samples actually read or <0 on error.
  */
-int ads1672_buf_readk(int * out, size_t count);
+int ads1672_buf_readk(ads1672_sample_t * out, size_t count);
 
 /**
  * Read data from ADS1672 device, user space version.
@@ -45,7 +46,7 @@ int ads1672_buf_readk(int * out, size_t count);
  *
  * Data is copied using copy_to_user.
  */
-int ads1672_buf_readu(int __user * out, size_t count);
+int ads1672_buf_readu(ads1672_sample_t __user * out, size_t count);
 
 /**
  * Flip read and write buffers on successfully filling the write buffer.
