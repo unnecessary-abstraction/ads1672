@@ -21,13 +21,13 @@
  * ads1672 character device.
  */
 
+#include <ads1672.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/ioctl.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 
-#include "ads1672_ioctl.h"
 #include "buffer.h"
 #include "device.h"
 #include "gpio.h"

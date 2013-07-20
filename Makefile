@@ -20,9 +20,10 @@
 
 SRC := $(shell pwd)
 KERNEL_SRC := $(SRC)/kernel
+EXTRA_CFLAGS := -I$(SRC)/include
 
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module EXTRA_CFLAGS="$(EXTRA_CFLAGS)" modules
 
 modules_install:
 	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module modules_install

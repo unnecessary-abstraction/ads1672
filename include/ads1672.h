@@ -17,14 +17,15 @@
  */
 
 /**
- * \file ads1672_ioctl.h
- * ads1672 ioctls.
+ * \file ads1672.h
+ * User header for operations on the ads1672 device.
  */
 
 #ifndef __ADS1672_IOCTL_H_INCLUDED__
 #define __ADS1672_IOCTL_H_INCLUDED__
 
 #include <linux/ioctl.h>
+#include <linux/time.h>
 
 enum ADS1672_IOCTL {
 	ADS1672_IOCTL_MAGIC = '=',
