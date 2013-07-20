@@ -19,17 +19,19 @@
 ################################################################################
 
 SRC := $(shell pwd)
-KERNEL_SRC := kernel
+KERNEL_SRC := $(SRC)/kernel
 
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module modules
 
 modules_install:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules_install
+	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module modules_install
 
 install: modules_install
 	install -m 0755 -d $(INSTALL_MOD_PATH)/bin
 	install -m 0755 bin/ads1672_load bin/ads1672_unload $(INSTALL_MOD_PATH)/bin
 
 clean:
-	rm -rf *.o *.ko *.mod.c .*.cmd .tmp_versions *.order *.symvers *.o.d *~
+	rm -rf module/*.o module/*.ko module/*.mod.c module/.*.cmd \
+		module/.tmp_versions module/*.order module/*.symvers \
+		module/*.o.d *~
