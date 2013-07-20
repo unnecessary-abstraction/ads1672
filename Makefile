@@ -35,4 +35,4 @@ install: modules_install
 clean:
 	rm -rf module/*.o module/*.ko module/*.mod.c module/.*.cmd \
 		module/.tmp_versions module/*.order module/*.symvers \
-		module/*.o.d *~
+		module/*.o.d
