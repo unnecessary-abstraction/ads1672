@@ -76,7 +76,7 @@ int __init ads1672_init(void)
 		return r;
 	}
 		
-	r = ads1672_mcbsp_init(dma_addr, ADS1672_BUFFER_COUNT, 2);
+	r = ads1672_mcbsp_init(dma_addr);
 	if (r < 0) {
 		printk(KERN_ERR "ads1672: Failed to initialize McBSP. "
 				"Aborting module init...\n");

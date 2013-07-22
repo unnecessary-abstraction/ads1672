@@ -35,7 +35,7 @@
  *
  * \returns number of samples actually read or <0 on error.
  */
-int ads1672_buf_readk(ads1672_sample_t * out, size_t count);
+int ads1672_buf_readk(ads1672_sample_t * out, uint count);
 
 /**
  * Read data from ADS1672 device, user space version.
@@ -46,17 +46,13 @@ int ads1672_buf_readk(ads1672_sample_t * out, size_t count);
  *
  * Data is copied using copy_to_user.
  */
-int ads1672_buf_readu(ads1672_sample_t __user * out, size_t count);
+int ads1672_buf_readu(ads1672_sample_t __user * out, uint count);
 
 /**
- * Flip read and write buffers on successfully filling the write buffer.
+ * Complete the current period with the given condition and set the number of
+ * valid samples as given.
  */
-void ads1672_buf_flip(struct timespec ts);
-
-/**
- * Flip read and write buffers on an error condition.
- */
-void ads1672_buf_err_and_flip(int cond, int valid_samples, struct timespec ts);
+void ads1672_buf_complete(int cond, uint nr_samples);
 
 /**
  * Discard remaining data in current buffer and perform flip.
@@ -92,5 +88,15 @@ int ads1672_buf_init(void);
  * Delete buffering for an ADS1672 device.
  */
 void ads1672_buf_exit(void);
+
+/**
+ * The length of each period (or DMA frame).
+ */
+extern uint ads1672_period_length;
+
+/**
+ * The number of periods in the DMA buffer (or number of DMA frames).
+ */
+extern uint ads1672_nr_periods;
 
 #endif /* !__ADS1672_BUFFER_H_INCLUDED__ */

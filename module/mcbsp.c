@@ -54,16 +54,31 @@ static int mcbsp_status = 0;
 /* DMA callback function */
 static void ads1672_mcbsp_callback(int lch, u16 ch_status, void *data)
 {
-	int valid_samples;
-	struct timespec ts;
+	/* We know we're running with synchronisation enabled so we don't care
+	 * about the SYNC bit in ch_status. The flags in ch_status (CSR
+	 * register) are conveniently the same as the flags in the IRQ enable
+	 * register (CICR).
+	 */
+	ch_status &= ~ OMAP1_DMA_SYNC_IRQ;
 
-	getnstimeofday(&ts);
-
-	if (ch_status == OMAP_DMA_BLOCK_IRQ) {
-		ads1672_buf_flip(ts);
+	/* What we want is "End of frame" events - if any other bit is set it
+	 * signals an error condition.
+	 */
+	if (ch_status == OMAP_DMA_FRAME_IRQ) {
+		ads1672_buf_complete(ADS1672_COND_OK, ads1672_period_length);
+		/* We'd like to reset the status bit incase we get an IRQ for an
+		 * error condition before the next end of frame event, however
+		 * there doesn't seem to be a function for this in the current
+		 * API.
+		 */	
 	} else {
-		valid_samples = 0; /* TODO: Can we work out how many valid samples we have? */
-		ads1672_buf_err_and_flip(ADS1672_COND_DMA_ERROR, valid_samples, ts);
+		printk(KERN_ERR "ads1672: Transfer error 0x%04x", ch_status);
+		ads1672_buf_complete(ADS1672_COND_DMA_ERROR, 0);
+
+		/* TODO: What happens to the internal pointer the DMA subsystem
+		 * holds? It's incremented each sample and somehow needs to be
+		 * bumped to the start of the next period after an error.
+		 */
 	}
 }
 
@@ -101,8 +116,7 @@ int ads1672_mcbsp_status(void)
 	return mcbsp_status;
 }
 
-int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
-		unsigned int frames)
+int ads1672_mcbsp_init(dma_addr_t dma_dest)
 {
 	int r;
 	struct omap_mcbsp_reg_cfg config;
@@ -151,7 +165,7 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
 			OMAP2_DMA_MISALIGNED_ERR_IRQ);
 
 	omap_set_dma_transfer_params(dma_lch, OMAP_DMA_DATA_TYPE_S32,
-			frame_len, frames, OMAP_DMA_SYNC_ELEMENT,
+			ads1672_period_length, ads1672_nr_periods, OMAP_DMA_SYNC_ELEMENT,
 			OMAP24XX_DMA_MCBSP1_RX, OMAP_DMA_SRC_SYNC);
 	
 	omap_set_dma_src_params(dma_lch, 0, OMAP_DMA_AMODE_CONSTANT,

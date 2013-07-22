@@ -47,8 +47,7 @@ int ads1672_mcbsp_status(void);
 /**
  * Initilaize the McBSP interface.
  */
-int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
-		unsigned int frames);
+int ads1672_mcbsp_init(dma_addr_t dma_dest);
 
 /**
  * Close the McBSP interface.

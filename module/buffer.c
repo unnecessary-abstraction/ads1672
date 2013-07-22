@@ -24,6 +24,7 @@
 #include <ads1672.h>
 #include <linux/dma-mapping.h>
 #include <linux/completion.h>
+#include <linux/slab.h>
 #include <asm/uaccess.h>
 
 #include "buffer.h"
@@ -32,196 +33,248 @@
 	Private declarations and functions
 *******************************************************************************/
 
-/* A buffer used by the ADS1672 device. */
-struct ads1672_buffer {
-	/* Buffer start location. */
-	ads1672_sample_t *	start;
-	
-	/* Number of valid samples. */
-	int			nsamples;
+struct ads1672_period_status {
+	/* Condition code. */
+	int				cond;
 
-	/* Condition code at end of buffer. */
-	int			cond;
+	/* Number of valid samples. */
+	int				nr_samples;
 
 	/* Timespec at start of buffer. */
-	struct timespec		ts;
+	struct timespec			ts;
 };
 
-static ads1672_sample_t *	buffer_base = NULL;
-static dma_addr_t		buffer_base_dma = 0;
+static ads1672_sample_t *		buffer = NULL;
+static dma_addr_t			buffer_dma = 0;
 
-static ads1672_sample_t *	read_ptr = NULL;
-static struct completion	on_flip;
+static struct completion		period_completion;
+static uint				current_read_period;
+static uint				current_write_period;
+static uint				current_read_offset;
+static struct ads1672_period_status *	period_status;
 
-static struct ads1672_buffer	buffers[2];
-static struct ads1672_buffer *	read_buf = NULL;
-static struct ads1672_buffer *	write_buf = NULL;
-
-static int prep_read(size_t count)
+static int prep_read(uint * count)
 {
-	int len;
+	uint avail;
 	
-	if (count < 1)
+	if (*count < 1)
 		return -EINVAL;
 	
-	len = (read_buf->start + read_buf->nsamples) - read_ptr;
-	
-	/* If buffer is in use or all data has been read, wait for a flip. */
-	if ( (read_buf->cond == ADS1672_COND_IN_USE) || (len == 0) )
-		wait_for_completion(&on_flip);
-	
-	/* Check for error condition. */
-	if (read_buf->cond != ADS1672_COND_OK)
+	/* If the current buffer is marked as in use, then the following should
+	 * apply:
+	 * 	period_status[current_read_period].nr_samples = 0
+	 * 	current_read_offset = 0
+	 *
+	 * Therefore:
+	 * 	available samples = 0
+	 *
+	 * So we need to check whether the current buffer is marked as in use
+	 * before we calculate the number of available samples.
+	 */
+	/* If the current read period is the same as the current write period,
+	 * wait for the write to finish. */
+	if (current_read_period == current_write_period)
+		wait_for_completion(&period_completion);
+
+	/* On an error condition the number of available samples may also be
+	 * zero, so again we need to check for this before calculating the
+	 * number of available samples.
+	 */
+	if (period_status[current_read_period].cond != ADS1672_COND_OK)
 		return -EIO;
 	
-	/* Read upto count samples from read_ptr to end of current buffer. */
-	if (len > count)
-		len = (int)count;
+	/* Now the number of available samples can only be zero if the current
+	 * period is valid but all data has been read.
+	 */
+	avail = period_status[current_read_period].nr_samples - current_read_offset;
+	if (avail == 0) {
+		/* Move to the next period and wait if it is marked as in use.
+		 */
+		current_read_offset = 0;
+		current_read_period++;
+		if (current_read_period == ads1672_nr_periods)
+			current_read_period = 0;
+		if (current_read_period == current_write_period)
+			wait_for_completion(&period_completion);
 
-	return len;
+		/* We need to check for an error condition again. */
+		if (period_status[current_read_period].cond != ADS1672_COND_OK)
+			return -EIO;
+
+		/* Recalculate available samples - this should never be zero */
+		avail = period_status[current_read_period].nr_samples -
+			current_read_offset;
+	}
+
+	/* Read upto count samples from the current offset to end of current
+	 * period.
+	 */
+	if (*count > avail)
+		*count = avail;
+
+	return 0;
 }
 
 /*******************************************************************************
 	Public functions
 *******************************************************************************/
 
-int ads1672_buf_readk(ads1672_sample_t * out, size_t count)
-{
-	int len = prep_read(count);
-	if (len < 0)
-		return len;
+uint				ads1672_nr_periods;
+uint				ads1672_period_length;
 
-	memcpy(out, read_ptr, len * sizeof(int));
-	read_ptr += len;
-	return len;
+int ads1672_buf_readk(ads1672_sample_t * out, uint count)
+{
+	int r;
+	uint index;
+	
+	r = prep_read(&count);
+	if (r < 0)
+		return r;
+
+	index = current_read_period * ads1672_period_length + current_read_offset;
+
+	memcpy(out, &buffer[index], count * sizeof(ads1672_sample_t));
+	current_read_offset += count;
+	return count;
 }
 
-int ads1672_buf_readu(ads1672_sample_t __user * out, size_t count)
+int ads1672_buf_readu(ads1672_sample_t __user * out, uint count)
 {
-	unsigned long r;
-	int len = prep_read(count);
-	if (len < 0)
-		return len;
+	int r;
+	uint index;
+	
+	r = prep_read(&count);
+	if (r < 0)
+		return r;
 
-	r = copy_to_user(out, read_ptr, len * sizeof(int));
+	index = current_read_period * ads1672_period_length + current_read_offset;
+
+	r = copy_to_user(out, &buffer[index], count * sizeof(ads1672_sample_t));
 	if (r != 0)
-		return -1;
+		return -EIO;
 	
-	read_ptr += len;
-	return len;
+	current_read_offset += count;
+	return count;
 }
 
-void ads1672_buf_flip(struct timespec ts)
+void ads1672_buf_complete(int cond, uint nr_samples)
 {
-	ads1672_buf_err_and_flip(ADS1672_COND_OK, ADS1672_BUFFER_COUNT, ts);
-}
+	/* Set values of the finished period. */
+	period_status[current_write_period].cond = cond;
+	period_status[current_write_period].nr_samples = nr_samples;
+	period_status[current_write_period].ts.tv_sec = 0;
+	period_status[current_write_period].ts.tv_nsec = 0;
 
-void ads1672_buf_err_and_flip(int cond, int valid_samples, struct timespec ts)
-{
-	struct ads1672_buffer * tmp;
-	
-	/* Check whether previous buffer has been read. */
-	if (read_ptr != (read_buf->start + read_buf->nsamples)) {
-		/* Set condition to overrun if no other condition is set. */
-		if (cond == ADS1672_COND_OK)
-			cond = ADS1672_COND_OVERRUN;
+	/* Advance the current write period. */
+	current_write_period++;
+	if (current_write_period == ads1672_nr_periods)
+		current_write_period = 0;
+
+	/* Check for overrun - if this has happened, advance the current read
+	 * period and mark the overrun condition.
+	 */
+	if (current_write_period == current_read_period) {
+		current_read_offset = 0;
+		current_read_period++;
+		if (current_read_period == ads1672_nr_periods)
+			current_read_period = 0;
+		period_status[current_read_period].cond = ADS1672_COND_OVERRUN;
 	}
-	
-	/* Flip buffers. */
-	tmp = read_buf;
-	read_buf = write_buf;
-	write_buf = tmp;
-	
-	/* Setup new read and write buffers. */
-	read_buf->nsamples = valid_samples;
-	read_buf->cond = cond;
-	read_ptr = read_buf->start;
-	
-	write_buf->nsamples = 0;
-	write_buf->ts = ts;
-	write_buf->cond = ADS1672_COND_IN_USE;
-	
-	complete(&on_flip);
+
+	/* Mark the new write period as in use just incase. */
+	period_status[current_write_period].cond = ADS1672_COND_IN_USE;
+	period_status[current_write_period].nr_samples = 0;
+
+	/* Raise the completion incase someone was waiting for data. */
+	complete(&period_completion);
 }
 
 void ads1672_buf_flush(void)
 {
-	struct ads1672_buffer * tmp;
-	
-	/*
-	   Discard current buffer and move to the opposite one. If a following
-	   read operation is initiated before new data is available, it will
-	   wait for the "on_flip" completion.
-	
-	   We assume that the reader knows what they are doing and will correct
-	   any timing info it holds.
-	*/
-	
-	/* Flip buffers. */
-	tmp = read_buf;
-	read_buf = write_buf;
-	write_buf = tmp;
-	
-	read_ptr = read_buf->start;
+	/* Discard current buffer and move to the next one. We assume that the
+	 * reader knows what they are doing and will correct any timing info it
+	 * holds.
+	 */
+	current_read_period++;
+	if (current_read_period == ads1672_nr_periods)
+		current_read_period = 0;
+	current_read_offset = 0;
 }
 
 void ads1672_buf_clear_cond(void)
 {
 	/* We assume the caller knows what they're doing. */
-	read_buf->cond = ADS1672_COND_OK;
+	period_status[current_read_period].cond = ADS1672_COND_OK;
 }
 
 dma_addr_t ads1672_buf_get_dma_addr(void)
 {
-	return buffer_base_dma;
+	return buffer_dma;
 }
 
 int ads1672_buf_get_cond(void)
 {
-	return read_buf->cond;
+	return period_status[current_read_period].cond;
 }
 
 void ads1672_buf_get_timespec(struct timespec * ts)
 {
-	*ts = read_buf->ts;
+	*ts = period_status[current_read_offset].ts;
 }
 
 int ads1672_buf_init(void)
-{	
-	buffer_base = (ads1672_sample_t *)dma_alloc_coherent(NULL,
-			2 * ADS1672_BUFFER_SIZE, &buffer_base_dma, GFP_KERNEL);
-	if (!buffer_base)
+{
+	size_t buffer_size;
+
+	/* Set ads1672_nr_periods and ads1672_period_length to constants from the header.
+	 * Keeping these as variables allows them to be changed later.
+	 */
+	ads1672_nr_periods = ADS1672_NR_PERIODS;
+	ads1672_period_length = ADS1672_PERIOD_LENGTH;
+
+	buffer_size = ads1672_nr_periods * ads1672_period_length *
+		sizeof(ads1672_sample_t);
+	
+	buffer = (ads1672_sample_t *) dma_alloc_coherent(NULL, buffer_size,
+			&buffer_dma, GFP_KERNEL);
+	if (!buffer)
 		return -ENOMEM;
 	
-	init_completion(&on_flip);
+	period_status = (struct ads1672_period_status *) kmalloc(ads1672_nr_periods *
+			sizeof(struct ads1672_period_status), GFP_KERNEL);
+	if (!period_status) {
+		dma_free_coherent(NULL, buffer_size, buffer, buffer_dma);
+		return -ENOMEM;
+	}
 	
-	read_buf = &buffers[0];
-	read_buf->start = buffer_base;
-	read_buf->cond = ADS1672_COND_OK;
-	read_buf->nsamples = 0;
-	read_ptr = read_buf->start;
-	
-	write_buf = &buffers[1];
-	write_buf->start = buffer_base + ADS1672_BUFFER_SIZE;
-	write_buf->cond = ADS1672_COND_IN_USE;
+	init_completion(&period_completion);
+
+	current_read_period = 0;
+	current_write_period = 0;
+	current_read_offset = 0;
+
+	/* Mark the first period as in use. */
+	period_status[0].cond = ADS1672_COND_IN_USE;
+	period_status[0].nr_samples = 0;
+	period_status[0].ts.tv_sec = 0;
+	period_status[0].ts.tv_nsec = 0;
 	
 	return 0;
 }
 
 void ads1672_buf_exit(void)
 {
-	if (buffer_base) {
-		dma_free_coherent(NULL, 2 * ADS1672_BUFFER_SIZE, buffer_base, buffer_base_dma);
-		buffer_base = NULL;
-		buffer_base_dma = 0;
+	if (buffer) {
+		size_t buffer_size = ads1672_nr_periods * ads1672_period_length *
+			sizeof(ads1672_sample_t);
+
+		dma_free_coherent(NULL, buffer_size, buffer, buffer_dma);
+		buffer = NULL;
+		buffer_dma = 0;
 	}
-	
-	read_buf = NULL;
-	write_buf = NULL;
-	
-	buffers[0].cond = ADS1672_COND_INVALID;
-	buffers[0].start = NULL;
-	
-	buffers[1].cond = ADS1672_COND_INVALID;
-	buffers[1].start = NULL;
+
+	if (period_status) {
+		kfree(period_status);
+		period_status = NULL;
+	}
 }

@@ -97,17 +97,18 @@ typedef int ads1672_sample_t;
 
 enum {
 	/**
-	* Size of each buffer in bytes.
+	* Length of each period in samples.
 	*
-	* This is currently 256kB in order to fit 64k samples in each buffer for a
-	* flip-rate of approximately 10Hz.
+	* This is currently 64 ksamples (256 kB) for a period completion
+	* approximately every 100 ms.
 	*/
-	ADS1672_BUFFER_SIZE = 256 * 1024,
+	ADS1672_PERIOD_LENGTH = 64 * 1024,
 
 	/**
-	* Number of samples in each buffer, calculated from ADS1672_BUFFER_SIZE.
+	* Number of periods in the DMA buffer. This is currently 4, giving 256
+	* ksamples and a memory usage of 1 MB.
 	*/
-	ADS1672_BUFFER_COUNT = ADS1672_BUFFER_SIZE / sizeof(ads1672_sample_t)
+	ADS1672_NR_PERIODS = 4
 };
 
 /**
