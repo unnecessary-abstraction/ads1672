@@ -144,6 +144,12 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest, unsigned int frame_len,
 	if (r < 0)
 		return r;
 
+	/* Select only desired interrupts. */
+	omap_disable_dma_irq(dma_lch, 0xFFFF);
+	omap_enable_dma_irq(dma_lch, OMAP_DMA_DROP_IRQ | OMAP_DMA_FRAME_IRQ |
+			OMAP2_DMA_TRANS_ERR_IRQ | OMAP2_DMA_SUPERVISOR_ERR_IRQ |
+			OMAP2_DMA_MISALIGNED_ERR_IRQ);
+
 	omap_set_dma_transfer_params(dma_lch, OMAP_DMA_DATA_TYPE_S32,
 			frame_len, frames, OMAP_DMA_SYNC_ELEMENT,
 			OMAP24XX_DMA_MCBSP1_RX, OMAP_DMA_SRC_SYNC);
