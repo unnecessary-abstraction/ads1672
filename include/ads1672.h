@@ -25,7 +25,15 @@
 #define __ADS1672_IOCTL_H_INCLUDED__
 
 #include <linux/ioctl.h>
+
+/* We need to take the appropriate definition of struct timespec depending on
+ * whether this header is being used in kernel space or in user space.
+ */
+#ifdef __KERNEL__
 #include <linux/time.h>
+#else
+#include <time.h>
+#endif
 
 enum ADS1672_IOCTL {
 	ADS1672_IOCTL_MAGIC = '=',
