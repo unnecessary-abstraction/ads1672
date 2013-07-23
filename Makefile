@@ -22,6 +22,15 @@ SRC := $(shell pwd)
 KERNEL_SRC := $(SRC)/kernel
 EXTRA_CFLAGS := -I$(SRC)/include
 
+prefix := /usr/local
+sbindir := $(prefix)/sbin
+includedir := $(prefix)/include
+
+# If INSTALL_MOD_PATH hasn't been set but DESTDIR has, use that for installing
+# kernel modules
+INSTALL_MOD_PATH := $(DESTDIR)
+export INSTALL_MOD_PATH
+
 all:
 	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module EXTRA_CFLAGS="$(EXTRA_CFLAGS)" modules
 
@@ -29,9 +38,11 @@ modules_install:
 	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)/module modules_install
 
 install: modules_install
-	install -m 0755 -d $(INSTALL_MOD_PATH)/sbin
+	install -m 0755 -d $(DESTDIR)$(sbindir)
 	install -m 0755 sbin/ads1672_load sbin/ads1672_unload \
-		$(INSTALL_MOD_PATH)/sbin
+		$(DESTDIR)$(sbindir)
+	install -m 0755 -d $(DESTDIR)$(includedir)
+	install -m 0644 include/ads1672.h $(DESTDIR)$(includedir)
 
 clean:
 	rm -rf module/*.o module/*.ko module/*.mod.c module/.*.cmd \
