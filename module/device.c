@@ -86,7 +86,7 @@ static ssize_t ads1672_read(struct file *f,
 {
 	int r;
 
-	r = ads1672_buf_readu((ads1672_sample_t __user *)buf, count/4);
+	r = ads1672_buf_readu((ads1672_sample_t __user *)buf, count/sizeof(ads1672_sample_t));
 
 	/*
 		Return value of ads1672_buf_readu is in samples not bytes but we
