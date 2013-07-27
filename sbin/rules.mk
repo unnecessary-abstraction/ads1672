@@ -1,5 +1,5 @@
 ################################################################################
-#	Makefile for ads1672.
+#	rules.mk for ads1672 system binaries.
 #
 #	Copyright (C) 2013 Paul Barker, Loughborough University
 #
@@ -18,22 +18,23 @@
 #	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 ################################################################################
 
-# The build system for this project was written after reading "Recursive Make
-# Considered Harmful" by Peter Miller [1] and follows the implementation notes
-# linked to on that page [2], with a few tweaks of my own.
-#
-# [1]: http://miller.emu.id.au/pmiller/books/rmch/
-# [2]: http://evbergen.home.xs4all.nl/nonrecursive-make.html
+# Push directory stack
+sp := $(sp).x
+dirstack_$(sp) := $(d)
+d := $(dir)
 
-# Include `unconfig.mk`, created by our configure script
-include unconfig.mk
+# Targets and intermediates in this directory
+TGTS_$(d) := $(d)/ads1672_load $(d)/ads1672_unload
 
-# Support for high or low verbosity
-ifeq ($(VERBOSITY),0)
-  Q := @
-else
-  Q :=
-endif
+INSTALL_DEPS += install-$(d)
 
-# Include top-level rules
-include $(SRCDIR)/rules.mk
+# Rules for this directory
+.PHONY: install-$(d)
+install-$(d): $(TGTS_$(d))
+	@echo INSTALL $^
+	$(Q)$(INSTALL) -m 0755 -d $(DESTDIR)$(sbindir)
+	$(Q)$(INSTALL) -m 0755 $^ $(DESTDIR)$(sbindir)
+
+# Pop directory stack
+d := $(dirstack_$(sp))
+sp := $(basename $(sp))
