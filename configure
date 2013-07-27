@@ -1,0 +1,65 @@
+#! /usr/bin/python3
+################################################################################
+#	Configure script for ads1672.
+#
+#	Copyright (C) 2013 Paul Barker, Loughborough University
+#
+#	This program is free software; you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation; either version 2 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program; if not, write to the Free Software
+#	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+################################################################################
+
+import os
+from unconfig import *
+
+# Describe ourself
+name = "ads1672"
+version = "0.1-pre1"
+
+# Environment variables which may be brought in
+env_list = ("CC", "CCLD", "AR", "CFLAGS", "LDFLAGS", "PYTHON", "INSTALL",
+	"KERNEL_SRCDIR", "KERNEL_CC", "KERNEL_LD", "KERNEL_AR", "DEPMOD")
+
+# Main configuration
+init(name, version)
+parse_cmdline()
+read_envs(env_list)
+require(configure_cc())
+require(configure_ccld())
+require(configure_ar())
+configure_install_dirs()
+find_srcdir()
+
+var_append("CFLAGS", "-Wall -Wextra")
+var_set("VERBOSITY", "0")
+var_set("DEPFLAGS", "-MD")
+var_weak_set("PYTHON", "python")
+var_weak_set("INSTALL", "install")
+
+# If kernel tools haven't been set, default to CC and CCLD as discovered above
+var_weak_set("KERNEL_CC", var_get("CC"))
+var_weak_set("KERNEL_LD", var_get("CCLD"))
+var_weak_set("KERNEL_AR", var_get("AR"))
+
+# If KERNEL_SRCDIR hasn't set, by default look for a 'kernel' symlink in the top
+# source directory for this project
+var_weak_set("KERNEL_SRCDIR", os.path.join(var_get("SRCDIR"), "kernel"))
+
+finalize()
+
+# Create empty directory tree
+if is_out_of_tree():
+	print("Refusing to build outside source tree!")
+	fail()
+
+write_config_makefile()
