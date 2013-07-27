@@ -127,6 +127,12 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest)
 		return r;
 
 	memset(&config, 0, sizeof(config));
+
+	/* The data from the ads1672 comes in signed twos complement format,
+	 * MSB-first. The 24 bit samples should be right-justified and
+	 * sign-extended into the McBSP data register.
+	 */
+	config.spcr1 = RJUST(1);
 	
 	/* Delay between frame sync pulse and first data bit. */
 	config.rcr2 = RDATDLY(ADS1672_DATA_DELAY);
