@@ -149,9 +149,10 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest)
 	config.srgr1 = CLKGDV(3);
 
 	/* CLKR is an output driven by internal clock. FSRM=0, FSR is an input
-	 * and drives internal frame sync.
+	 * and drives internal frame sync. CLKRP=1, sample of rising edge of
+	 * clock signal rather than falling edge.
 	 */
-	config.pcr0 = CLKRM;
+	config.pcr0 = CLKRM | CLKRP;
 
 	/* Enable DMA on receive. */
 	config.rccr = RDMAEN;
