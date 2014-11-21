@@ -22,6 +22,7 @@
  */
 
 #include <ads1672.h>
+#include <linux/interrupt.h>
 #include <linux/string.h>
 #include <plat/mcbsp.h>
 #include <plat/dma.h>
@@ -183,6 +184,9 @@ int ads1672_mcbsp_init(dma_addr_t dma_dest)
 
 	/* Link the DMA channel to itself. */
 	omap_dma_link_lch(dma_lch, dma_lch);
+
+	/* Disable McBSP IRQ as we're using DMA to handle data transfer. */
+	disable_irq(60);
 
 	mcbsp_status |= ADS1672_STATUS_READY;
 	
